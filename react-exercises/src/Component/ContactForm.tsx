@@ -1,8 +1,8 @@
 import {useState} from "react";
 
-function ContactForm() {
+function ContactForm():any{
     const [formData, setFormData] = useState({
-        name: '',
+        nom: '',
         email: '',
         phone: '',
         message: ''
@@ -10,101 +10,195 @@ function ContactForm() {
 
     const [errors, setErrors] = useState({});
     const [submitSuccess, setSubmitSuccess] = useState(false);
+    const [message, setMessage] = useState('');
+    const [touched, setTouched] = useState({});
 
     const handleChange = (e: any) => {
-        
-        validateField("name", e.target.name)
-        validateField("email", e.target.email)
-        validateField("phone", e.target.phone)
-        validateField("message", e.target.message)
+        const {name, value} = e.target;
+        setFormData({
+            ...formData,
+            [name]: value
+        })
+        if (value){
+            validateField(name, value);
+        }
+        if (Object.keys(validateAll()).length === 0){
+            setSubmitSuccess(true)
+        }
+        else {
+            setSubmitSuccess(false);
+        }
     };
 
-    const validateField = (fieldName: string, value: any) => {
-        switch (fieldName) {
-            case "name":
-                if (!value) {
-                    setErrors(["Nom Requis"]);
-                } else if (value.length < 2) {
-                    setErrors(["Nom avec minimum 2 caracteres requis"]);
-                } else {
-                    setFormData(value)
-                }
-                break;
-            case "email":
-                if (!value) {
-                    setErrors(["Email Requis"]);
-                } else if (value != "/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/") {
-                    setErrors(["Email non conforme"]);
-                }
-                break;
-            case "phone":
-                if (!value) {
-                    setErrors(["Téléphone Requis"]);
-                } else if (value == "/^0[1-9]\d{8}$/") {
-                    setErrors(["Téléphone de 10 caractère requis"]);
-                }
-                break;
-            case "message":
-                if (!value) {
-                    setErrors(['Message Requis']);
-                } else if (value.length < 10) {
-                    setErrors(["Message de minimum 10 caractères requis"]);
-                }
-                break;
-        }
-
-        return errors
+    const handleBlur = (e: any) => {
+        const { name, value } = e.target;
+        setTouched({ ...touched, [name]: true });
+        validateField(name, value);
     };
 
     const handleSubmit = (e:any) => {
         e.preventDefault();
-        setFormData({
-            name: '',
-            email: '',
-            phone: '',
-            message: ''
-        });
-        if (submitSuccess){
-            return "✅ Message envoyé avec succès !"
+        const validationErrors = validateAll();
+
+        if (Object.keys(validationErrors).length === 0) {
+            setSubmitSuccess(true)
+            setMessage("\n"+
+                formData.nom+
+                "\n"+formData.email+
+                "\n"+formData.phone+
+                "\n"+formData.message+
+
+                "\n✅ Message envoyé avec succès !"
+            )
         }
+        else{
+            setErrors(validationErrors);
+            setTouched({
+                nom: true,
+                email: true,
+                phone: true,
+                message: true
+            })
+            setFormData({
+                nom: '',
+                email: '',
+                phone: '',
+                message: ''
+            });
+            setMessage( "Envoie impossible")
+        }
+    };
+
+
+    const validateField = (fieldName: string, value: any) => {
+        let error = ''
+        switch (fieldName) {
+            case "nom":
+                if (!value) {
+                    error ="Nom requis"
+                } else if (value.length < 2) {
+                    error ="Nom avec minimum 2 caracteres requis"
+                }
+                break;
+            case "email":
+                if (!value) {
+                    error ="Email Requis"
+                } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+                    error ="Email non conforme"
+                }
+                break;
+            case "phone":
+                if (!value) {
+                    error ="Téléphone Requis"
+                } else if (!/^0[1-9]\d{8}$/.test(value)) {
+                    error ="Téléphone de 10 chiffres requis"
+                }
+                break;
+            case "message":
+                if (!value) {
+                    error ='Message Requis'
+                } else if (value.length < 10) {
+                    error ="Message de minimum 10 caractères requis"
+                }
+                break;
+        }
+        setErrors({...errors,[fieldName]: error});
+    };
+
+    const validateAll = () => {
+        const newErrors:{nom: string, email: string, phone: string,message: string} = {};
+
+        // Nom
+        if (!formData.nom) {
+            newErrors.nom = 'Le nom est requis';
+        } else if (formData.nom.length < 2) {
+            newErrors.nom = 'Le nom doit contenir au moins 2 caractères';
+        }
+
+        // Email
+        if (!formData.email) {
+            newErrors.email = 'L\'email est requis';
+        } else if (!(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))) {
+            newErrors.email = 'L\'email n\'est pas valide';
+        }
+
+        // Téléphone
+        if (!formData.phone) {
+            newErrors.phone = 'Le téléphone est requis';
+        } else if (!(/^0[0-9]\d{8}$/.test(formData.phone))) {
+            newErrors.phone = 'Le téléphone doit contenir 10 chiffres';
+        }
+
+        // Message
+        if (!formData.message) {
+            newErrors.message = 'Le message est requis';
+        } else if (formData.message.length < 10) {
+            newErrors.message = 'Le message doit contenir au moins 10 caractères';
+        }
+
+        return newErrors;
     };
 
     return (
         <form onSubmit={handleSubmit}>
-            <label htmlFor="nom"> Nom : </label>
-            <input
-                name="nom"
-                type="text"
-                onChange={handleChange}
-                value={formData.name}
-            />
+            <ul>
+                <li>
+                    <label htmlFor="nom"> Nom : </label>
+                    <input
+                        name="nom"
+                        type="text"
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        value={formData.nom}
+                    />
+                    {touched.nom && errors.nom && (
+                        <span className="error">{errors.nom}</span>
+                    )}
+                </li>
+                <li>
+                    <label htmlFor="email"> Email : </label>
+                    <input
+                        name="email"
+                        type="email"
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        value={formData.email}
+                    />
 
-            <label htmlFor="email"> Email : </label>
-            <input
-                name="email"
-                type="text"
-                onChange={handleChange}
-                value={formData.email}
-            />
-
-            <label htmlFor="phone"> Téléphone : </label>
-            <input
-                name="phone"
-                type="tel"
-                onChange={handleChange}
-                value={formData.phone}
-            />
-
-            <label htmlFor="message"> Message : </label>
-            <input
-                name="message"
-                type="text"
-                onChange={handleChange}
-                value={formData.message}
-            />
-            <button type={"submit"} disabled={true}>Envoyer</button>
+                    {touched.email && errors.email && (
+                        <span className="error">{errors.email}</span>
+                    )}
+                </li>
+                <li>
+                    <label htmlFor="phone"> Téléphone : </label>
+                    <input
+                        name="phone"
+                        type="tel"
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        value={formData.phone}
+                    />
+                    {touched.phone && errors.phone && (
+                        <span className="error">{errors.phone}</span>
+                    )}
+                </li>
+                <li>
+                    <label htmlFor="message"> Message : </label>
+                    <input
+                        name="message"
+                        type="text"
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        value={formData.message}
+                    />
+                    {touched.message && errors.message && (
+                        <span className="error">{errors.message}</span>
+                    )}
+                </li>
+            </ul>
+            <button type={"submit"} disabled={!submitSuccess}>Envoyer</button>
+            {message && <p>{message}</p>}
         </form>
-
     );
 }
 
